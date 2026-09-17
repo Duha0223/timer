@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physio Workout Suite</title>
+<style>
+  :root {
+    --glass-card: rgba(18, 32, 25, 0.76);
+    --glass-border: rgba(180, 225, 195, 0.28);
+    --glass-border-light: rgba(255, 255, 255, 0.18);
+    --text: #f3f9f4;
+    --muted: #a6c9b2;
+    --col-ready:  #e08a3c;
+    --col-active: #d65d45;
+    --col-rest:   #4ba368;
+    --col-done:   #2e5c3e;
+    --col-plain:  #d1973c;
+    --col-next:   #345843;
+    
+    --left-col-width: 44%;
+    --left-top-height: 52%;
+    --right-top-height: 60%;
+    --circle-dyn-size: 160px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0; padding: 10px 14px;
+    background: url('https://wallpapers-clan.com/wp-content/uploads/2024/07/studio-ghibli-totoro-forest-desktop-wallpaper-preview.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 1720px;
+    height: 97vh;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 6px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .brand-group { display: flex; align-items: baseline; gap: 10px; }
+  h1 { font-size: 1.25rem; margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.6); }
+  .sub { color: var(--muted); font-size: .75rem; }
+
+  .header-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .scale-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .75rem;
+    color: var(--muted);
+    background: rgba(0,0,0,0.25);
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border-light);
+  }
+  .scale-ctrl input[type=range] {
+    width: 80px;
+    accent-color: var(--col-rest);
+  }
+
+  .toggle-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .toggle-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border-light);
+    color: var(--muted);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: .75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .toggle-btn.active {
+    background: var(--col-rest);
+    color: #fff;
+    border-color: #8edaa5;
+  }
+
+  .layout-grid {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    user-select: none;
+  }
+
+  .left-col {
+    width: var(--left-col-width);
+    min-width: 280px;
+    max-width: 75%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .right-col {
+    flex: 1;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .resizer-bar-v {
+    width: 10px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 4px;
+    z-index: 10;
+  }
+  .resizer-bar-v::after {
+    content: '';
+    width: 4px;
+    height: 70px;
+    background: var(--glass-border);
+    border-radius: 4px;
+    transition: background .2s, height .2s;
+  }
+  .resizer-bar-v:hover::after, .resizer-bar-v.dragging::after {
+    background: var(--col-rest);
+    height: 120px;
+  }
+
+  .resizer-bar-h {
+    height: 10px;
+    cursor: row-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 3px 0;
+    z-index: 10;
+  }
+  .resizer-bar-h::after {
+    content: '';
+    width: 70px;
+    height: 4px;
+    background: var(--glass-border);
+    border-radius: 4px;
+    transition: background .2s, width .2s;
+  }
+  .resizer-bar-h:hover::after, .resizer-bar-h.dragging::after {
+    background: var(--col-rest);
+    width: 120px;
+  }
+
+  .panel {
+    background: var(--glass-card);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 12px 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.38);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-height: 70px;
+    overflow: hidden;
+  }
+  .panel.hidden { display: none !important; }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  #panel-timer {
+    height: var(--left-top-height);
+    flex-shrink: 0;
+    container-type: size;
+  }
+  .stage-inner {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    justify-items: center;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    padding: 4px 8px;
+  }
+
+  .circle-center-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .circle-wrap {
+    position: relative;
+    width: min(var(--circle-dyn-size), 85cqh, 75cqw);
+    height: min(var(--circle-dyn-size), 85cqh, 75cqw);
+    aspect-ratio: 1/1;
+    flex-shrink: 0;
+    transition: width .1s ease-out, height .1s ease-out;
+  }
+  .circle-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  circle.bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 12; }
+  circle.fg { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke .3s; }
+  .circle-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .bignum { font-size: min(calc(var(--circle-dyn-size) * 0.28), 3.4rem); font-weight: 900; line-height: 1; }
+
+  .stage-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 90px;
+  }
+  .ex-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+  .ex-phase { font-size: .68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+
+  .btn-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  button.ctrl {
+    border: 1px solid var(--glass-border-light); border-radius: 8px; padding: 6px 10px;
+    font-size: .75rem; font-weight: 700; cursor: pointer;
+    background: rgba(255,255,255,0.12); color: var(--text);
+    width: 96px;
+    text-align: center;
+    transition: transform .1s, background .15s;
+  }
+  button.ctrl:hover { background: rgba(255,255,255,0.22); }
+  button.ctrl:active { transform: scale(0.96); }
+  button.ctrl.primary { background: var(--col-active); border-color: rgba(255,255,255,0.3); }
+  button.ctrl.danger  { background: rgba(144, 48, 16, 0.7); }
+  button.ctrl.pause-all { background: #b8600a; border-color: #f7a261; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+
+  #panel-sounds {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .sound-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .sound-card {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: background .2s, border-color .2s;
+  }
+  .sound-card:hover { background: rgba(255, 255, 255, 0.15); }
+  .sound-card.active { background: var(--col-rest); border-color: #8edaa5; }
+  .sound-card span { display: block; font-size: 1.3rem; margin-bottom: 2px; }
+  .sound-card small { font-size: .75rem; font-weight: 600; }
+
+  #panel-yt {
+    height: var(--right-top-height);
+    flex-shrink: 0;
+  }
+  .yt-controls-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+  .row-inputs {
+    display: flex;
+    gap: 6px;
+  }
+  .yt-inp {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: .8rem;
+    color: #fff;
+  }
+  .yt-inp:focus { outline: 2px solid var(--col-rest); }
+  .yt-inp::placeholder { color: rgba(255, 255, 255, 0.45); }
+  
+  .yt-select {
+    background: #1b2e23;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: .8rem;
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn-action {
+    background: var(--col-rest);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: .78rem;
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-action.sec {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid var(--glass-border-light);
+  }
+
+  .yt-display-area {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+  .yt-player-box {
+    flex: 1.4;
+    min-height: 130px;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    border: 1.5px solid var(--glass-border);
+  }
+  .yt-player-box iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .yt-library-drawer {
+    flex: 1;
+    min-height: 80px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .yt-library-drawer::-webkit-scrollbar { width: 5px; }
+  .yt-library-drawer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+  .lib-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border-light);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .lib-item:hover { background: rgba(255, 255, 255, 0.16); }
+  .lib-title {
+    flex: 1;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lib-tag {
+    font-size: .65rem;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .btn-del-vid {
+    color: #ff7676;
+    background: none;
+    border: none;
+    font-size: .8rem;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  #panel-playlist {
+    flex: 1;
+    min-height: 0;
+  }
+  .playlist-container {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 4px;
+    margin-bottom: 6px;
+  }
+  .playlist-container::-webkit-scrollbar { width: 5px; }
+  .playlist-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+  #playlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  li.ex-item {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  li.ex-item:hover { background: rgba(255,255,255,0.1); }
+  li.ex-item.active-ex { border-color: #f7a261; box-shadow: 0 0 10px rgba(224, 138, 60, 0.35); background: rgba(46, 75, 58, 0.7); }
+
+  .ex-header {
+    display: flex; align-items: center; gap: 8px; padding: 7px 9px; cursor: pointer; user-select: none;
+  }
+  .handle { cursor: grab; color: var(--muted); font-size: .95rem; }
+  .ex-check { accent-color: var(--col-rest); width: 14px; height: 14px; cursor: pointer; }
+  .ex-label { flex: 1; min-width: 0; }
+  .ex-label-name { font-weight: 700; font-size: .84rem; }
+  .ex-label-meta { font-size: .68rem; color: var(--muted); }
+  .chevron { color: var(--muted); font-size: .78rem; transition: transform .2s; }
+  .chevron.open { transform: rotate(90deg); }
+
+  .ex-body { display: none; padding: 6px 9px 8px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15); }
+  .ex-body.open { display: block; }
+  .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px,1fr)); gap: 6px; }
+  .field { display: flex; flex-direction: column; gap: 2px; }
+  .field label { font-size: .62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .f-inp {
+    background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); border-radius: 6px;
+    padding: 4px 6px; font-size: .76rem; color: #fff; width: 100%;
+  }
+  .f-inp option { background: #1b2e23; color: #fff; }
+  .time-row { display: flex; gap: 3px; align-items: center; }
+  .time-row .f-inp { width: 44px; }
+  .ex-actions { margin-top: 6px; display: flex; }
+  .btn-delete { background: rgba(180, 40, 40, 0.4); color: #fff; border-radius: 6px; padding: 3px 8px; font-size: .7rem; margin-left: auto; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+
+  .btn-add {
+    width: 100%; background: rgba(75, 163, 104, 0.35); border: 1px solid rgba(142, 218, 165, 0.4);
+    border-radius: 9px; padding: 7px; font-size: .8rem; color: #fff; font-weight: 700; cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  footer { color: var(--muted); font-size: .68rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand-group">
+      <h1>🩹 Physio Workout Suite</h1>
+      <div class="sub">Dynamic Multi-Split Station · Global Video Search</div>
+    </div>
+    <div class="header-controls">
+      <div class="scale-ctrl">
+        <span>⏱️ Circle Size:</span>
+        <input type="range" id="circleSizeSlider" min="90" max="320" value="160">
+      </div>
+      <div class="toggle-bar">
+        <span style="font-size:.72rem;color:var(--muted);margin-right:2px;">Panels:</span>
+        <button class="toggle-btn active" data-target="panel-timer">⏱️ Timer</button>
+        <button class="toggle-btn active" data-target="panel-sounds">🌿 Sounds</button>
+        <button class="toggle-btn active" data-target="panel-yt">📺 YouTube Library</button>
+        <button class="toggle-btn active" data-target="panel-playlist">📋 Routine</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout-grid" id="layoutGrid">
+    <div class="left-col" id="leftCol">
+      <div class="panel" id="panel-timer">
+        <div class="panel-header">
+          <span class="panel-title">⏱️ Workout Stage</span>
+        </div>
+        <div class="stage-inner">
+          <div class="circle-center-slot">
+            <div class="circle-wrap" id="circleWrap">
+              <svg viewBox="0 0 200 200">
+                <circle class="bg" cx="100" cy="100" r="86"/>
+                <circle class="fg" id="fgCircle" cx="100" cy="100" r="86"
+                  stroke-dasharray="540" stroke-dashoffset="540" stroke="var(--col-ready)"/>
+              </svg>
+              <div class="circle-center">
+                <div class="bignum" id="bignum">--</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-info">
+            <div class="ex-title" id="exTitle">Ready</div>
+            <div class="ex-phase" id="exPhase">Tap Start Workout</div>
+          </div>
+
+          <div class="btn-col">
+            <button class="ctrl primary" id="btnStart">▶ Start</button>
+            <button class="ctrl" id="btnPause" disabled>⏸ Pause</button>
+            <button class="ctrl pause-all" id="btnPauseAll">⏸ Pause All</button>
+            <button class="ctrl" id="btnSkip" disabled>⏭ Skip</button>
+            <button class="ctrl danger" id="btnReset">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer-bar-h" id="resizerLeftH"></div>
+
+      <div class="panel" id="panel-sounds">
+        <div class="panel-header">
+          <span class="panel-title">🌿 Ambient Sounds (Built-in Audio)</span>
+        </div>
+        <div class="sound-grid">
+          <div class="sound-card active" data-sound="mute">
+            <span>🔇</span><small>Mute</small>
+          </div>
+          <div class="sound-card" data-sound="rain">
+            <span>🌧️</span><small>Rain</small>
+          </div>
+          <div class="sound-card" data-sound="birds">
+            <span>🌲</span><small>Birds</small>
+          </div>
+          <div class="sound-card" data-sound="ocean">
+            <span>🌊</span><small>Ocean</small>
+          </div>
+          <div class="sound-card" data-sound="fire">
+            <span>🔥</span><small>Campfire</small>
+          </div>
+          <div class="sound-card" data-sound="stream">
+            <span>💧</span><small>Stream</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="resizer-bar-v" id="resizerBarV"></div>
+
+    <div class="right-col" id="rightCol">
+      <div class="panel" id="panel-yt">
+        <div class="panel-header">
+          <span class="panel-title" id="ytStatusTitle">📺 YouTube Player & Library</span>
+        </div>
+
+        <div class="yt-controls-bar">
+          <div class="row-inputs">
+            <select class="yt-select" id="folderSelect"></select>
+            <button class="btn-action sec" id="btnNewFolder">＋ Folder</button>
+            <button class="btn-action sec" id="btnDelFolder">🗑 Folder</button>
+            <input type="text" class="yt-inp" id="searchAllInp" placeholder="🔍 Search video titles across ALL folders..." style="flex:1;">
+          </div>
+          <div class="row-inputs">
+            <input type="text" class="yt-inp" id="videoTitleInp" placeholder="Video Title (e.g. Lower Back Stretch)" style="flex:1;">
+            <input type="text" class="yt-inp" id="videoUrlInp" placeholder="YouTube Link or ID" style="flex:1.2;">
+            <button class="btn-action" id="btnSaveVideo">💾 Save</button>
+            <button class="btn-action" id="btnPlayDirect">▶ Play</button>
+          </div>
+        </div>
+
+        <div class="yt-display-area">
+          <div class="yt-player-box">
+            <iframe id="ytPlayerFrame" src="https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?enablejsapi=1&rel=0&autoplay=0" allow="autoplay; fullscreen; encrypted-media"></iframe>
+          </div>
+          <div class="yt-library-drawer" id="ytLibraryDrawer"></div>
+        </div>
+      </div>
+
+      <div class="resizer-bar-h" id="resizerRightH"></div>
+
+      <div class="panel" id="panel-playlist">
+        <div class="panel-header">
+          <span class="panel-title">📋 Exercise Routine</span>
+        </div>
+        <div class="playlist-container">
+          <ul id="playlist"></ul>
+        </div>
+        <button class="btn-add" id="btnAddEx">＋ Add Exercise</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>100% Reliable Offline Sound Synthesis · Zero External Audio Dependencies</footer>
+</div>
+
+<script>
+/* ═══════════════════ DATA & STORAGE ═══════════════════ */
+const STORAGE_KEY = 'physio_suite_v12';
+const YT_LIB_KEY = 'physio_yt_library_v4';
+const CIRC = 2 * Math.PI * 86;
+
+const DEFAULT_EXERCISES = [
+  { id:'heat',        name:'Heat Pad',                      enabled:true, type:'plain',   sets:1, reps:1,  repUnit:'min', repMins:15, repSecs:0,  restSecs:3, restEnabled:false },
+  { id:'slrL',        name:'SLR – Left Leg',                enabled:true, type:'counted', sets:1, reps:10, repUnit:'sec', repMins:0,  repSecs:5,  restSecs:3, restEnabled:true  },
+  { id:'slrR',        name:'SLR – Right Leg',               enabled:true, type:'counted', sets:1, reps:10, repUnit:'sec', repMins:0,  repSecs:5,  restSecs:3, restEnabled:true  },
+  { id:'glute',       name:'Glute Bridge',                  enabled:true, type:'counted', sets:1, reps:8,  repUnit:'sec', repMins:0,  repSecs:10, restSecs:3, restEnabled:true  },
+  { id:'fig4L',       name:'Figure 4 Stretch – Left',       enabled:true, type:'counted', sets:1, reps:5,  repUnit:'sec', repMins:0,  repSecs:10, restSecs:3, restEnabled:true  },
+  { id:'fig4R',       name:'Figure 4 Stretch – Right',      enabled:true, type:'counted', sets:1, reps:5,  repUnit:'sec', repMins:0,  repSecs:10, restSecs:3, restEnabled:true  },
+  { id:'wideGlute',   name:'Wide Stance Glute Bridge',      enabled:true, type:'counted', sets:1, reps:5,  repUnit:'sec', repMins:0,  repSecs:10, restSecs:3, restEnabled:true  },
+  { id:'narrowGlute', name:'Narrow Stance Glute Bridge',    enabled:true, type:'counted', sets:1, reps:5,  repUnit:'sec', repMins:0,  repSecs:10, restSecs:3, restEnabled:true  },
+  { id:'plank',       name:'Plank',                         enabled:true, type:'plain',   sets:1, reps:1,  repUnit:'sec', repMins:0,  repSecs:30, restSecs:3, restEnabled:false },
+];
+
+const DEFAULT_YT_LIB = {
+  activeFolder: 'Back Exercises',
+  folders: {
+    'Back Exercises': [
+      { id: '4BOTvaRaDjI', title: 'Gentle Back Pain Relief Routine' },
+      { id: '2q8pL_pE9A0', title: '10 Min Lower Back Stretches' }
+    ],
+    'Cardio & Dance': [
+      { id: 'jfKfPfyJRdk', title: 'Lofi Ambient Workout Stream' }
+    ]
+  }
+};
+
+function loadEx() {
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_EXERCISES));
+}
+function saveEx() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(exercises)); } catch(e){} }
+
+function loadYtLib() {
+  try { const r = localStorage.getItem(YT_LIB_KEY); if (r) return JSON.parse(r); } catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_YT_LIB));
+}
+function saveYtLib() { try { localStorage.setItem(YT_LIB_KEY, JSON.stringify(ytLib)); } catch(e){} }
+
+let exercises = loadEx();
+let ytLib = loadYtLib();
+
+function repDur(ex) { return ex.repUnit==='min' ? ex.repMins*60+(ex.repSecs||0) : (ex.repSecs||0); }
+function metaText(ex) {
+  const d = repDur(ex);
+  const ds = ex.repUnit==='min' ? `${ex.repMins}m${(ex.repSecs||0)?(' '+(ex.repSecs||0)+'s'):''}` : `${d}s`;
+  if (ex.type==='plain') return `Timer · ${ds}`;
+  const r = ex.restEnabled ? ` · rest ${ex.restSecs}s` : '';
+  return `${ex.sets} set${ex.sets>1?'s':''} · ${ex.reps} reps · ${ds}/rep${r}`;
+}
+
+/* ═══════════════════ STATE ═══════════════════ */
+let running=false, paused=false, stopReq=false, skipReq=false, runToken=0;
+let wakeLock = null;
+
+const $=id=>document.getElementById(id);
+const el={
+  title:$('exTitle'), phase:$('exPhase'), bignum:$('bignum'),
+  fg:$('fgCircle'), btnStart:$('btnStart'), btnPause:$('btnPause'),
+  btnSkip:$('btnSkip'), btnReset:$('btnReset'), playlist:$('playlist'),
+  btnPauseAll:$('btnPauseAll'),
+  leftCol:$('leftCol'), rightCol:$('rightCol'), layoutGrid:$('layoutGrid'),
+  resizerBarV:$('resizerBarV'), resizerLeftH:$('resizerLeftH'), resizerRightH:$('resizerRightH'),
+  panelTimer:$('panel-timer'), panelSounds:$('panel-sounds'), panelYt:$('panel-yt'), panelPlaylist:$('panel-playlist'),
+  ytPlayerFrame:$('ytPlayerFrame'), ytStatusTitle:$('ytStatusTitle'),
+  folderSelect:$('folderSelect'), btnNewFolder:$('btnNewFolder'), btnDelFolder:$('btnDelFolder'),
+  videoTitleInp:$('videoTitleInp'), videoUrlInp:$('videoUrlInp'), btnSaveVideo:$('btnSaveVideo'),
+  btnPlayDirect:$('btnPlayDirect'), ytLibraryDrawer:$('ytLibraryDrawer'), searchAllInp:$('searchAllInp'),
+  circleSizeSlider:$('circleSizeSlider')
+};
+
+/* ═══════════════════ RESIZERS & DYNAMIC SCALING ═══════════════════ */
+let currentDrag = null;
+
+el.circleSizeSlider.addEventListener('input', e => {
+  const size = e.target.value;
+  document.documentElement.style.setProperty('--circle-dyn-size', `${size}px`);
+});
+
+el.resizerBarV.addEventListener('mousedown', () => {
+  currentDrag = 'vertical';
+  el.resizerBarV.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+});
+
+el.resizerLeftH.addEventListener('mousedown', () => {
+  currentDrag = 'leftH';
+  el.resizerLeftH.classList.add('dragging');
+  document.body.style.cursor = 'row-resize';
+});
+
+el.resizerRightH.addEventListener('mousedown', () => {
+  currentDrag = 'rightH';
+  el.resizerRightH.classList.add('dragging');
+  document.body.style.cursor = 'row-resize';
+});
+
+window.addEventListener('mousemove', e => {
+  if (!currentDrag) return;
+
+  if (currentDrag === 'vertical') {
+    const gridRect = el.layoutGrid.getBoundingClientRect();
+    const percent = ((e.clientX - gridRect.left) / gridRect.width) * 100;
+    const clamped = Math.min(Math.max(percent, 20), 80);
+    document.documentElement.style.setProperty('--left-col-width', `${clamped}%`);
+  } 
+  else if (currentDrag === 'leftH') {
+    const colRect = el.leftCol.getBoundingClientRect();
+    const percent = ((e.clientY - colRect.top) / colRect.height) * 100;
+    const clamped = Math.min(Math.max(percent, 15), 85);
+    document.documentElement.style.setProperty('--left-top-height', `${clamped}%`);
+  } 
+  else if (currentDrag === 'rightH') {
+    const colRect = el.rightCol.getBoundingClientRect();
+    const percent = ((e.clientY - colRect.top) / colRect.height) * 100;
+    const clamped = Math.min(Math.max(percent, 15), 85);
+    document.documentElement.style.setProperty('--right-top-height', `${clamped}%`);
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  if (currentDrag) {
+    el.resizerBarV.classList.remove('dragging');
+    el.resizerLeftH.classList.remove('dragging');
+    el.resizerRightH.classList.remove('dragging');
+    document.body.style.cursor = 'default';
+    currentDrag = null;
+  }
+});
+
+/* ═══════════════════ PANEL VISIBILITY TOGGLES ═══════════════════ */
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const panel = $(targetId);
+    if (panel) {
+      panel.classList.toggle('hidden');
+      btn.classList.toggle('active', !panel.classList.contains('hidden'));
+
+      if (targetId === 'panel-timer' || targetId === 'panel-sounds') {
+        const timerHidden = el.panelTimer.classList.contains('hidden');
+        const soundsHidden = el.panelSounds.classList.contains('hidden');
+        el.resizerLeftH.style.display = (timerHidden || soundsHidden) ? 'none' : 'flex';
+        if (timerHidden) el.panelSounds.style.flex = '1';
+        if (soundsHidden) el.panelTimer.style.height = '100%';
+        if (!timerHidden && !soundsHidden) el.panelTimer.style.height = 'var(--left-top-height)';
+      }
+
+      if (targetId === 'panel-yt' || targetId === 'panel-playlist') {
+        const ytHidden = el.panelYt.classList.contains('hidden');
+        const playlistHidden = el.panelPlaylist.classList.contains('hidden');
+        el.resizerRightH.style.display = (ytHidden || playlistHidden) ? 'none' : 'flex';
+        if (ytHidden) el.panelPlaylist.style.flex = '1';
+        if (playlistHidden) el.panelYt.style.height = '100%';
+        if (!ytHidden && !playlistHidden) el.panelYt.style.height = 'var(--right-top-height)';
+      }
+    }
+  });
+});
+
+/* ═══════════════════ YOUTUBE LIBRARY ENGINE WITH GLOBAL SEARCH ═══════════════════ */
+function parseYtLink(val) {
+  const clean = val.trim();
+  const match = clean.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([\w-]{11})/);
+  return match ? match[1] : (/^[a-zA-Z0-9_-]{11}$/.test(clean) ? clean : null);
+}
+
+function playVideo(id, title) {
+  el.ytPlayerFrame.src = `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&autoplay=1&rel=0`;
+  if (title) el.ytStatusTitle.textContent = `📺 Playing: ${title}`;
+}
+
+function renderFolders() {
+  el.folderSelect.innerHTML = '';
+  const folderNames = Object.keys(ytLib.folders);
+  if (!folderNames.length) {
+    ytLib.folders['General'] = [];
+    ytLib.activeFolder = 'General';
+  }
+  if (!ytLib.folders[ytLib.activeFolder]) {
+    ytLib.activeFolder = Object.keys(ytLib.folders)[0];
+  }
+
+  Object.keys(ytLib.folders).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `📁 ${name}`;
+    if (name === ytLib.activeFolder) opt.selected = true;
+    el.folderSelect.appendChild(opt);
+  });
+
+  renderVideoList();
+}
+
+function renderVideoList() {
+  el.ytLibraryDrawer.innerHTML = '';
+  const searchFilter = el.searchAllInp.value.trim().toLowerCase();
+  
+  if (searchFilter) {
+    let allMatches = [];
+    Object.entries(ytLib.folders).forEach(([folderName, items]) => {
+      items.forEach((item, idx) => {
+        if (item.title.toLowerCase().includes(searchFilter)) {
+          allMatches.push({ ...item, folder: folderName, origIdx: idx });
+        }
+      });
+    });
+
+    if (!allMatches.length) {
+      el.ytLibraryDrawer.innerHTML = `
+        <div style="font-size:.72rem;color:var(--muted);text-align:center;padding:12px;">
+          No videos found across all folders matching "${searchFilter}".
+        </div>`;
+      return;
+    }
+
+    allMatches.forEach((item) => {
+      const div = document.createElement('div');
+      div.className = 'lib-item';
+      div.innerHTML = `
+        <span style="font-size:.85rem;">🎬</span>
+        <span class="lib-title" title="${item.title}">${item.title}</span>
+        <span class="lib-tag">📁 ${item.folder}</span>
+        <button class="btn-del-vid" title="Delete Video">✕</button>
+      `;
+      div.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-del-vid')) {
+          e.stopPropagation();
+          ytLib.folders[item.folder].splice(item.origIdx, 1);
+          saveYtLib();
+          renderVideoList();
+          return;
+        }
+        playVideo(item.id, item.title);
+      });
+      el.ytLibraryDrawer.appendChild(div);
+    });
+    return;
+  }
+
+  const currentList = ytLib.folders[ytLib.activeFolder] || [];
+  if (!currentList.length) {
+    el.ytLibraryDrawer.innerHTML = `
+      <div style="font-size:.72rem;color:var(--muted);text-align:center;padding:12px;">
+        No saved videos in "${ytLib.activeFolder}". Paste a link above to save one!
+      </div>`;
+    return;
+  }
+
+  currentList.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'lib-item';
+    div.innerHTML = `
+      <span style="font-size:.85rem;">🎬</span>
+      <span class="lib-title" title="${item.title}">${item.title}</span>
+      <button class="btn-del-vid" title="Delete Video">✕</button>
+    `;
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-del-vid')) {
+        e.stopPropagation();
+        currentList.splice(idx, 1);
+        saveYtLib();
+        renderVideoList();
+        return;
+      }
+      playVideo(item.id, item.title);
+    });
+    el.ytLibraryDrawer.appendChild(div);
+  });
+}
+
+el.searchAllInp.addEventListener('input', renderVideoList);
+
+el.folderSelect.addEventListener('change', (e) => {
+  ytLib.activeFolder = e.target.value;
+  el.searchAllInp.value = '';
+  saveYtLib();
+  renderVideoList();
+});
+
+el.btnNewFolder.addEventListener('click', () => {
+  const name = prompt("Enter new folder name (e.g. Back Exercises, Stretching, Upper Body):");
+  if (name && name.trim()) {
+    const clean = name.trim();
+    if (!ytLib.folders[clean]) {
+      ytLib.folders[clean] = [];
+      ytLib.activeFolder = clean;
+      saveYtLib();
+      renderFolders();
+    } else {
+      alert("Folder already exists.");
+    }
+  }
+});
+
+el.btnDelFolder.addEventListener('click', () => {
+  const current = ytLib.activeFolder;
+  if (Object.keys(ytLib.folders).length <= 1) {
+    alert("You must keep at least one folder.");
+    return;
+  }
+  if (confirm(`Delete folder "${current}" and all videos inside?`)) {
+    delete ytLib.folders[current];
+    ytLib.activeFolder = Object.keys(ytLib.folders)[0];
+    saveYtLib();
+    renderFolders();
+  }
+});
+
+el.btnSaveVideo.addEventListener('click', () => {
+  const urlVal = el.videoUrlInp.value.trim();
+  const titleVal = el.videoTitleInp.value.trim();
+  const vidId = parseYtLink(urlVal);
+
+  if (!vidId) {
+    alert("Please paste a valid YouTube video link or 11-digit video ID.");
+    return;
+  }
+
+  const finalTitle = titleVal || `Video (${vidId})`;
+  if (!ytLib.folders[ytLib.activeFolder]) ytLib.folders[ytLib.activeFolder] = [];
+  ytLib.folders[ytLib.activeFolder].push({ id: vidId, title: finalTitle });
+  
+  saveYtLib();
+  renderVideoList();
+  el.videoTitleInp.value = '';
+  el.videoUrlInp.value = '';
+});
+
+el.btnPlayDirect.addEventListener('click', () => {
+  const urlVal = el.videoUrlInp.value.trim();
+  const vidId = parseYtLink(urlVal);
+  if (vidId) {
+    playVideo(vidId, el.videoTitleInp.value.trim() || 'Direct Video');
+  } else {
+    alert("Please enter a valid YouTube link.");
+  }
+});
+
+/* ═══════════════════ GUARANTEED SYNTHESIZED SOUND GENERATOR ═══════════════════ */
+let audioCtx = null;
+let currentAmbientNodes = [];
+let birdInterval = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function stopAmbient() {
+  if (birdInterval) {
+    clearInterval(birdInterval);
+    birdInterval = null;
+  }
+  currentAmbientNodes.forEach(node => {
+    try {
+      if (node.stop) node.stop();
+      if (node.disconnect) node.disconnect();
+    } catch(e){}
+  });
+  currentAmbientNodes = [];
+}
+
+function createNoiseBuffer(ctx) {
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
+}
+
+function playAmbientSound(type) {
+  stopAmbient();
+  if (type === 'mute') return;
+
+  const ctx = getAudioContext();
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(0.35, ctx.currentTime);
+  masterGain.connect(ctx.destination);
+  currentAmbientNodes.push(masterGain);
+
+  if (type === 'rain') {
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = createNoiseBuffer(ctx);
+    whiteNoise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, ctx.currentTime);
+
+    whiteNoise.connect(filter);
+    filter.connect(masterGain);
+    whiteNoise.start();
+    currentAmbientNodes.push(whiteNoise);
+  } 
+  else if (type === 'ocean') {
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = createNoiseBuffer(ctx);
+    whiteNoise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(450, ctx.currentTime);
+    filter.Q.setValueAtTime(1.2, ctx.currentTime);
+
+    const lfo = ctx.createOscillator();
+    lfo.frequency.setValueAtTime(0.12, ctx.currentTime);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(0.25, ctx.currentTime);
+
+    lfo.connect(lfoGain.gain);
+    whiteNoise.connect(filter);
+    filter.connect(lfoGain);
+    lfoGain.connect(masterGain);
+
+    whiteNoise.start();
+    lfo.start();
+    currentAmbientNodes.push(whiteNoise, lfo);
+  }
+  else if (type === 'stream') {
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = createNoiseBuffer(ctx);
+    whiteNoise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1300, ctx.currentTime);
+    filter.Q.setValueAtTime(2.5, ctx.currentTime);
+
+    whiteNoise.connect(filter);
+    filter.connect(masterGain);
+    whiteNoise.start();
+    currentAmbientNodes.push(whiteNoise);
+  }
+  else if (type === 'fire') {
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = createNoiseBuffer(ctx);
+    whiteNoise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, ctx.currentTime);
+
+    whiteNoise.connect(filter);
+    filter.connect(masterGain);
+    whiteNoise.start();
+    currentAmbientNodes.push(whiteNoise);
+  }
+  else if (type === 'birds') {
+    const bgHiss = ctx.createBufferSource();
+    bgHiss.buffer = createNoiseBuffer(ctx);
+    bgHiss.loop = true;
+    const bgFilter = ctx.createBiquadFilter();
+    bgFilter.type = 'lowpass';
+    bgFilter.frequency.setValueAtTime(350, ctx.currentTime);
+    const bgGain = ctx.createGain();
+    bgGain.gain.setValueAtTime(0.08, ctx.currentTime);
+
+    bgHiss.connect(bgFilter);
+    bgFilter.connect(bgGain);
+    bgGain.connect(masterGain);
+    bgHiss.start();
+    currentAmbientNodes.push(bgHiss);
+
+    function chirp() {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const startFreq = 2200 + Math.random() * 800;
+      osc.frequency.setValueAtTime(startFreq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(startFreq + 600, ctx.currentTime + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(startFreq - 300, ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.16);
+    }
+
+    birdInterval = setInterval(() => {
+      if (Math.random() > 0.3) {
+        chirp();
+        setTimeout(chirp, 160);
+      }
+    }, 1800);
+  }
+}
+
+document.querySelectorAll('.sound-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.sound-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    playAmbientSound(card.dataset.sound);
+  });
+});
+
+/* ═══════════════════ MASTER PAUSE ALL ═══════════════════ */
+el.btnPauseAll.addEventListener('click', () => {
+  if (running && !paused) {
+    paused = true;
+    el.btnPause.textContent = '▶ Resume';
+    speak('All paused.');
+  }
+  stopAmbient();
+  document.querySelectorAll('.sound-card').forEach(c => c.classList.remove('active'));
+  const muteCard = document.querySelector('.sound-card[data-sound="mute"]');
+  if (muteCard) muteCard.classList.add('active');
+
+  try {
+    el.ytPlayerFrame.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+  } catch(e){}
+});
+
+/* ═══════════════════ WAKE LOCK & GRAPHICS ═══════════════════ */
+async function acquireWakeLock() {
+  if ('wakeLock' in navigator && !wakeLock) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch(e){}
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) { try { wakeLock.release(); } catch(e){} wakeLock = null; }
+}
+
+function setCircle(frac, color) {
+  el.fg.setAttribute('stroke-dashoffset', (CIRC*(1-Math.max(0,Math.min(1,frac)))).toFixed(2));
+  el.fg.setAttribute('stroke', color);
+}
+setCircle(0,'var(--col-ready)');
+
+function fmtTime(s) {
+  if (s>=60) return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+  return String(s);
+}
+
+function speak(text, rate=1, pitch=1) {
+  if (!('speechSynthesis' in window)) return;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=rate; u.pitch=pitch; u.volume=1;
+  window.speechSynthesis.speak(u);
+}
+
+/* ═══════════════════ TIMERS & SEQUENCER ═══════════════════ */
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+async function waitPaused(token) {
+  while (paused && token===runToken && !stopReq && !skipReq) await sleep(80);
+}
+
+async function tickCircle(token, totalSecs, color, onTick) {
+  let rem = totalSecs;
+  setCircle(rem/totalSecs, color);
+  if (onTick) onTick(rem);
+
+  while (rem > 0) {
+    if (token!==runToken || stopReq || skipReq) return false;
+    await waitPaused(token);
+    if (token!==runToken || stopReq || skipReq) return false;
+    await sleep(1000);
+    if (token!==runToken || stopReq || skipReq) return false;
+    rem--;
+    setCircle(rem/totalSecs, color);
+    if (onTick) onTick(rem);
+  }
+  return true;
+}
+
+async function doReady(token, name) {
+  el.title.textContent = name;
+  el.phase.textContent = 'GET READY';
+  speak('Ready.');
+  for (let i=3; i>=1; i--) {
+    if (token!==runToken || stopReq || skipReq) return false;
+    await waitPaused(token);
+    el.bignum.textContent = String(i);
+    setCircle(i/3, 'var(--col-ready)');
+    await sleep(1000);
+  }
+  return token===runToken && !stopReq && !skipReq;
+}
+
+async function doTransition(token, name) {
+  el.title.textContent = name;
+  el.phase.textContent = 'NEXT UP';
+  el.bignum.textContent = '…';
+  setCircle(1, 'var(--col-next)');
+  speak(`Next: ${name}.`);
+  await sleep(1800);
+  return token===runToken && !stopReq && !skipReq;
+}
+
+async function doRest(token, secs) {
+  if (!secs || secs<=0) return true;
+  el.phase.textContent = 'REST';
+  speak('Rest.');
+  return await tickCircle(token, secs, 'var(--col-rest)', s => {
+    el.bignum.textContent = fmtTime(s);
+  });
+}
+
+async function runPlain(ex, token) {
+  if (!await doReady(token, ex.name)) return;
+  await sleep(300);
+  const dur = repDur(ex);
+  speak('Start.');
+  const ok = await tickCircle(token, dur, 'var(--col-plain)', s => {
+    el.phase.textContent = 'IN PROGRESS';
+    el.bignum.textContent = fmtTime(s);
+    if (dur>=120 && s===60) speak('One minute left.');
+    else if (dur>=60 && s===30) speak('Thirty seconds left.');
+    else if (s<=3 && s>0) speak(String(s));
+  });
+  if (ok) {
+    speak('Done.');
+    el.phase.textContent='COMPLETE';
+    el.bignum.textContent='✓';
+    setCircle(0,'var(--col-done)');
+    await sleep(900);
+  }
+}
+
+async function runCounted(ex, token) {
+  const repSecs = repDur(ex);
+  const restSecs = ex.restEnabled ? (ex.restSecs||0) : 0;
+
+  for (let set=1; set<=ex.sets; set++) {
+    if (token!==runToken || stopReq || skipReq) return;
+    const setLbl = ex.sets>1 ? ` (Set ${set}/${ex.sets})` : '';
+
+    if (!await doReady(token, ex.name+setLbl)) return;
+    await sleep(200);
+    speak('Start.');
+    await sleep(600);
+
+    for (let rep=1; rep<=ex.reps; rep++) {
+      if (token!==runToken || stopReq || skipReq) return;
+      await waitPaused(token);
+
+      speak(String(rep));
+
+      const ok = await tickCircle(token, repSecs, 'var(--col-active)', s => {
+        el.phase.textContent = `REP ${rep} of ${ex.reps}${setLbl}`;
+        el.bignum.textContent = fmtTime(s);
+      });
+      if (!ok) return;
+
+      const lastRep = rep===ex.reps, lastSet = set===ex.sets;
+      if (restSecs>0 && !(lastRep && lastSet)) {
+        if (!await doRest(token, restSecs)) return;
+      }
+    }
+
+    speak('Set complete.');
+    el.phase.textContent=`SET ${set} COMPLETE`;
+    el.bignum.textContent='✓';
+    setCircle(0,'var(--col-done)');
+    await sleep(900);
+
+    if (set < ex.sets) {
+      speak('Rest before next set.');
+      el.phase.textContent='REST — NEXT SET';
+      const setRest = Math.max(restSecs*3, 15);
+      if (!await tickCircle(token, setRest, 'var(--col-rest)', s => {
+        el.bignum.textContent=fmtTime(s);
+      })) return;
+    }
+  }
+
+  el.phase.textContent='COMPLETE';
+  el.bignum.textContent='✓';
+  setCircle(0,'var(--col-done)');
+  await sleep(900);
+}
+
+async function startWorkout() {
+  if (running) return;
+  await acquireWakeLock();
+
+  running=true; paused=false; stopReq=false; skipReq=false;
+  runToken++;
+  const token = runToken;
+  el.btnStart.disabled=true; el.btnPause.disabled=false; el.btnSkip.disabled=false;
+  renderPlaylist();
+
+  const active = exercises.filter(e => e.enabled);
+  if (!active.length) {
+    el.title.textContent='No exercises enabled';
+    el.phase.textContent='Enable at least one below';
+    endSession();
+    return;
+  }
+
+  for (let i=0; i<active.length; i++) {
+    if (token!==runToken || stopReq) break;
+    skipReq = false;
+    const ex = active[i];
+    highlightActive(ex.id);
+
+    if (i > 0) {
+      const ok = await doTransition(token, ex.name);
+      if (!ok && !skipReq) break;
+    }
+    
+    if (token!==runToken || stopReq) break;
+
+    if (ex.type === 'plain') await runPlain(ex, token);
+    else                     await runCounted(ex, token);
+  }
+
+  if (token === runToken) {
+    el.title.textContent = stopReq ? 'Stopped' : '🎉 Complete!';
+    el.phase.textContent = stopReq ? '' : 'Great work!';
+    el.bignum.textContent = stopReq ? '' : '✓';
+    setCircle(0,'var(--col-done)');
+    if (!stopReq) speak('Workout complete. Great job!');
+    endSession();
+  }
+}
+
+function endSession() {
+  running=false; paused=false;
+  releaseWakeLock();
+  el.btnStart.disabled=false; el.btnPause.disabled=true; el.btnSkip.disabled=true;
+  el.btnPause.textContent='⏸ Pause';
+  highlightActive(null);
+  renderPlaylist();
+}
+
+function pauseResume() {
+  if (!running) return;
+  paused = !paused;
+  el.btnPause.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  if (paused) {
+    try { window.speechSynthesis.cancel(); } catch(e){}
+    speak('Paused.');
+  } else {
+    speak('Resuming.');
+  }
+}
+
+function skipEx() {
+  if (!running) return;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  skipReq = true;
+}
+
+function resetAll() {
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  stopReq = true;
+  skipReq = true;
+  paused = false;
+  runToken++;
+  endSession();
+  el.title.textContent = 'Ready';
+  el.phase.textContent = 'Tap Start';
+  el.bignum.textContent = '--';
+  setCircle(0,'var(--col-ready)');
+}
+
+/* ═══════════════════ PLAYLIST UI ═══════════════════ */
+let dragSrcId=null, openIds=new Set();
+
+function highlightActive(id) {
+  document.querySelectorAll('li.ex-item').forEach(li => {
+    li.classList.toggle('active-ex', li.dataset.id === id);
+    if (li.dataset.id === id) {
+      li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+}
+
+function newId() { return 'ex_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
+
+function addExercise() {
+  const ex = {
+    id: newId(),
+    name: 'New Exercise',
+    enabled: true,
+    type: 'counted',
+    sets: 1,
+    reps: 10,
+    repUnit: 'sec',
+    repMins: 0,
+    repSecs: 10,
+    restSecs: 3,
+    restEnabled: true
+  };
+  exercises.push(ex);
+  openIds.add(ex.id);
+  saveEx();
+  renderPlaylist();
+}
+
+function deleteEx(id) {
+  if (!confirm('Delete this exercise?')) return;
+  exercises = exercises.filter(e => e.id !== id);
+  openIds.delete(id);
+  saveEx();
+  renderPlaylist();
+}
+
+function renderPlaylist() {
+  el.playlist.innerHTML='';
+  exercises.forEach(ex => {
+    const li=document.createElement('li'); li.className='ex-item'; li.dataset.id=ex.id;
+    li.draggable=!running;
+    const isOpen=openIds.has(ex.id);
+
+    const hdr=document.createElement('div'); hdr.className='ex-header';
+    const handle=document.createElement('span'); handle.className='handle'; handle.textContent='☰';
+    hdr.appendChild(handle);
+    const chk=document.createElement('input'); chk.type='checkbox'; chk.className='ex-check';
+    chk.checked=ex.enabled; chk.disabled=running;
+    chk.addEventListener('change',e=>{e.stopPropagation();ex.enabled=chk.checked;saveEx();renderPlaylist();});
+    hdr.appendChild(chk);
+    const lbl=document.createElement('div'); lbl.className='ex-label';
+    lbl.innerHTML=`<div class="ex-label-name">${ex.name}</div><div class="ex-label-meta">${metaText(ex)}</div>`;
+    hdr.appendChild(lbl);
+    const chev=document.createElement('span'); chev.className='chevron'+(isOpen?' open':''); chev.textContent='›';
+    hdr.appendChild(chev);
+    hdr.addEventListener('click',e=>{if(e.target===chk)return;isOpen?openIds.delete(ex.id):openIds.add(ex.id);renderPlaylist();});
+    li.appendChild(hdr);
+
+    const body=document.createElement('div'); body.className='ex-body'+(isOpen?' open':'');
+    const grid=document.createElement('div'); grid.className='field-grid';
+
+    grid.appendChild(mField('Name',()=>{
+      const i=mInpTxt(ex.name,v=>{ex.name=v;saveEx();renderPlaylist();}); return i;
+    }));
+    grid.appendChild(mField('Type',()=>{
+      const s=mSel([['counted','Counted Reps'],['plain','Simple Timer']],ex.type,v=>{
+        ex.type=v; if(v==='plain'){ex.sets=1;ex.reps=1;ex.restEnabled=false;} saveEx();renderPlaylist();
+      }); return s;
+    }));
+
+    const dF=document.createElement('div'); dF.className='field';
+    const dL=document.createElement('label'); dL.textContent='Duration'; dF.appendChild(dL);
+    const uSel=mSel([['sec','Sec'],['min','Min']],ex.repUnit,v=>{ex.repUnit=v;saveEx();renderPlaylist();});
+    uSel.style.marginBottom='3px'; dF.appendChild(uSel);
+    if(ex.repUnit==='min'){
+      const row=document.createElement('div'); row.className='time-row';
+      row.appendChild(mNumInp(ex.repMins,0,60,v=>{ex.repMins=v;saveEx();renderPlaylist();},'m'));
+      row.appendChild(mNumInp(ex.repSecs||0,0,59,v=>{ex.repSecs=v;saveEx();renderPlaylist();},'s'));
+      dF.appendChild(row);
+    } else {
+      dF.appendChild(mNumInp(ex.repSecs,1,3600,v=>{ex.repSecs=v;saveEx();renderPlaylist();},'s'));
+    }
+    grid.appendChild(dF);
+
+    if(ex.type==='counted'){
+      grid.appendChild(mField('Sets',()=>mNumInp(ex.sets,1,20,v=>{ex.sets=v;saveEx();renderPlaylist();})));
+      grid.appendChild(mField('Reps',()=>mNumInp(ex.reps,1,50,v=>{ex.reps=v;saveEx();renderPlaylist();})));
+
+      const rF=document.createElement('div'); rF.className='field';
+      const rL=document.createElement('label'); rL.textContent='Rest (s)'; rF.appendChild(rL);
+      const rRow=document.createElement('div'); rRow.className='time-row';
+      const rChk=document.createElement('input'); rChk.type='checkbox'; rChk.checked=ex.restEnabled;
+      rChk.disabled=running;
+      rChk.addEventListener('change',()=>{ex.restEnabled=rChk.checked;saveEx();renderPlaylist();});
+      rRow.appendChild(rChk);
+      rRow.appendChild(mNumInp(ex.restSecs,1,60,v=>{ex.restSecs=v;saveEx();renderPlaylist();},'s'));
+      rF.appendChild(rRow); grid.appendChild(rF);
+    }
+
+    body.appendChild(grid);
+    const acts=document.createElement('div'); acts.className='ex-actions';
+    const del=document.createElement('button'); del.className='btn-delete'; del.textContent='🗑 Delete';
+    del.disabled=running; del.addEventListener('click',()=>deleteEx(ex.id)); acts.appendChild(del);
+    body.appendChild(acts);
+    li.appendChild(body);
+
+    li.addEventListener('dragstart',e=>{if(running)return;dragSrcId=ex.id;li.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    li.addEventListener('dragend',()=>li.classList.remove('dragging'));
+    li.addEventListener('dragover',e=>e.preventDefault());
+    li.addEventListener('drop',e=>{
+      e.preventDefault(); if(running||!dragSrcId||dragSrcId===ex.id)return;
+      const fi=exercises.findIndex(x=>x.id===dragSrcId), ti=exercises.findIndex(x=>x.id===ex.id);
+      const[m]=exercises.splice(fi,1); exercises.splice(ti,0,m);
+      dragSrcId=null; saveEx(); renderPlaylist();
+    });
+
+    el.playlist.appendChild(li);
+  });
+}
+
+function mField(label, buildInput) {
+  const f=document.createElement('div'); f.className='field';
+  const l=document.createElement('label'); l.textContent=label; f.appendChild(l);
+  f.appendChild(buildInput()); return f;
+}
+function mInpTxt(val, onChange) {
+  const i=document.createElement('input'); i.type='text'; i.className='f-inp'; i.value=val; i.disabled=running;
+  i.addEventListener('change',()=>onChange(i.value)); return i;
+}
+function mSel(opts, val, onChange) {
+  const s=document.createElement('select'); s.className='f-inp'; s.disabled=running;
+  opts.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;if(v===val)o.selected=true;s.appendChild(o);});
+  s.addEventListener('change',()=>onChange(s.value)); return s;
+}
+function mNumInp(val, min, max, onChange, unit) {
+  const wrap=document.createElement('div'); wrap.style.cssText='display:flex;align-items:center;gap:3px;';
+  const i=document.createElement('input'); i.type='number'; i.className='f-inp'; i.value=val; i.min=min; i.max=max;
+  i.style.width='44px'; i.disabled=running;
+  i.addEventListener('change',()=>{let v=parseInt(i.value,10);if(isNaN(v))v=min;v=Math.max(min,Math.min(max,v));i.value=v;onChange(v);});
+  wrap.appendChild(i);
+  if(unit){const u=document.createElement('span');u.textContent=unit;u.style.cssText='font-size:.62rem;color:var(--muted);';wrap.appendChild(u);}
+  return wrap;
+}
+
+/* ═══════════════════ INITIALIZE ═══════════════════ */
+el.btnStart.addEventListener('click', startWorkout);
+el.btnPause.addEventListener('click', pauseResume);
+el.btnSkip .addEventListener('click', skipEx);
+el.btnReset.addEventListener('click', resetAll);
+$('btnAddEx').addEventListener('click', addExercise);
+
+renderFolders();
+renderPlaylist();
+</script>
+</body>
+</html>
